@@ -18,13 +18,14 @@ import argparse
 import yaml
 import deploymentutils as du
 
-sys.path.insert(0, "ackrep_core")
-
-# noinspection PyUnresolvedReferences
-from ackrep_core import core
-
 from ipydex import IPS, activate_ips_on_exception
 activate_ips_on_exception()
+
+mod_path = os.path.dirname(os.path.abspath(__file__))
+core_mod_path = os.path.join(mod_path, "..", "ackrep_core")
+sys.path.insert(0, core_mod_path)
+from ackrep_core import core
+
 
 rendered_template_list = []
 
@@ -39,8 +40,14 @@ def main():
     with open(args.settingsfile) as f:
         settings = yaml.load(f, Loader=yaml.FullLoader)
 
+    # ------------------------------------------------------------------------------------------------------------------
+    print("find and render templates")
     res = find_and_render_templates(settings)
     rendered_template_list.extend(res)
+
+    if settings["type"] == "local":
+        print(du.bgreen("done"))
+        exit(0)
 
     local_deployment_files_base_dir = du.get_dir_of_this_file()
     general_base_dir = os.path.split(local_deployment_files_base_dir)[0]
@@ -53,7 +60,6 @@ def main():
     # we do not use os.path.join here because the target platform is unix but the host platform should be flexible
     remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
     c.chdir(remote_deployment_path)
-
     c.run(f"docker-compose down", target_spec="remote", printonly=args.no_docker)
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -87,7 +93,8 @@ def find_and_render_templates(settings_dict):
 
     # now render these templates
     results = []
-    base_path = os.path.dirname(os.path.abspath(__file__))
+    base_path = mod_path
+
     for template, settings in template_settings_mapping.items():
         context = dict(settings=settings)
         res = core.render_template(template, context=context, special_str=".template", base_path=base_path)

@@ -1,0 +1,13 @@
+type: "local"
+url: ""
+user: ""
+target_path: ""
+django-settings:
+    template: "../ackrep_core/ackrep_core_django_settings/custom_settings.py.template"
+    settings:
+        DEBUG: True
+        SECRET_KEY: "vgG52NM8RzCES3QVI7kZ9+uw8lS3U6Q++KgwSzFunTgQO29W1F"
+        ALLOWED_HOSTS:
+            - "localhost"
+            - "127.0.0.1"
+

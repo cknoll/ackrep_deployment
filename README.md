@@ -35,13 +35,10 @@ These components are represented by the following **directory layout**:
     │  ├── README.md                      ← the currently displayed file (README.md)
     │  ├── deploy.py                      ← deployment script
     │  ├── ...
-    │  ├── custom_settings__demo          ← instance-specific settings
+    │  ├── custom_settings__demo          ← instance-specific settings (not included in the repo)
     │  │   ├── settings.yml
     │  │   └── ...
-    │  ├── custom_settings__local         ← settings for local testing deployment
-    │  │   ├── settings.yml
-    │  │   └── ...
-    │  └── template_custom_settings       ← template/example for the custom settings
+    │  └── custom_settings__local         ← settings for local testing deployment (included for reference)
     │      ├── settings.yml
     │      └── ...
     │
@@ -61,8 +58,16 @@ For the deployment to work it is expected to clone them separately one level up 
 
 The deployment process is triggered by the command `python deploy.py <path_to/settings.yml>` and consists of the following steps (not all of them are currently implemented):
 
-- create configuration files such as `site_specific_settings.py` from templates with data from `settings.yml`.
+**steps for local and remote deployment**
+- create configuration files such as `site_specific_settings.py` from templates with data from `settings.yml`
+
+**steps only for remote deployment**
 - stop currently running ackrep-related services on the target server
 - upload (rsync) all project data
 - restart all running ackrep-related services on the target server
-- perform tests
+- perform tests (not yet implemented)
+
+**steps only for local deployment**
+- manually start development server: `python manage.py runserver` from the ackrep_core directory.
+
+
