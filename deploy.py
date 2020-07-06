@@ -16,6 +16,7 @@ import sys
 import os
 import argparse
 import yaml
+import deploymentutils as du
 
 sys.path.insert(0, "ackrep_core")
 
@@ -31,6 +32,7 @@ rendered_template_list = []
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("settingsfile", help=".yml-file for settings")
+    argparser.add_argument("-nd", "--no-docker", help="omit docker comands", action="store_true")
 
     args = argparser.parse_args()
 
@@ -39,6 +41,31 @@ def main():
 
     res = find_and_render_templates(settings)
     rendered_template_list.extend(res)
+
+    local_deployment_files_base_dir = du.get_dir_of_this_file()
+    general_base_dir = os.path.split(local_deployment_files_base_dir)[0]
+
+    c = du.StateConnection(settings["url"], user=settings["user"], target=settings["type"])
+
+    # ------------------------------------------------------------------------------------------------------------------
+    print("stop running services (this might fail in the first run)")
+
+    # we do not use os.path.join here because the target platform is unix but the host platform should be flexible
+    remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
+    c.chdir(remote_deployment_path)
+
+    c.run(f"docker-compose down", target_spec="remote", printonly=args.no_docker)
+
+    # ------------------------------------------------------------------------------------------------------------------
+    print("upload all deployment files")
+    source_path = general_base_dir+os.path.sep
+    c.rsync_upload(source_path, settings["target_path"], target_spec="remote", printonly=False)
+
+    # ------------------------------------------------------------------------------------------------------------------
+    print("restart the services")
+    remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
+    c.chdir(remote_deployment_path)
+    c.run(f"docker-compose up -d", target_spec="remote", printonly=args.no_docker)
 
 
 def find_and_render_templates(settings_dict):
@@ -67,7 +94,6 @@ def find_and_render_templates(settings_dict):
         results.append(res)
 
     return results
-
 
 
 if __name__ == "__main__":
