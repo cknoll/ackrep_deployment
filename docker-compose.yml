@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  ackrep-django:
+    environment:
+      DJANGO_MANAGEPY_MIGRATE: "on"
+    build:
+      context: ..
+      dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile
+    ports:
+      - "8000:8000"
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.ackrep-django.rule=Host(`demo.ackrep.org`)'
+      - 'traefik.http.routers.ackrep-django.tls=true'
+      - 'traefik.http.routers.ackrep-django.tls.certresolver=lets-encrypt'
