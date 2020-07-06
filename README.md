@@ -29,14 +29,11 @@ The ackrep project consists of several components which are maintained each in t
 
 These components are represented by the following **directory layout**:
 
-    <ackrep_project_dir>/                 ← deployment code for the ackrep project
-    ├── ackrep_deployment/                 ← deployment code for the ackrep project
+    <ackrep_project_dir>/
+    ├── ackrep_deployment/                ← repo with deployment code for the ackrep project
     │  ├── .git/
     │  ├── README.md                      ← the currently displayed file (README.md)
     │  ├── deploy.py                      ← deployment script
-    │  ├── ...
-    │  ├── ackrep_data/                      ← symbolic link to ../ackrep_data (relative path)
-    │  ├── ackrep_core/                      ← symbolic link to ../ackrep_core (relative path)
     │  ├── ...
     │  ├── custom_settings__demo          ← instance-specific settings
     │  │   ├── settings.yml
@@ -48,15 +45,17 @@ These components are represented by the following **directory layout**:
     │      ├── settings.yml
     │      └── ...
     │
-    ├── ackrep_data/                      ← actual repository for ackrep_data
+    │
+    │
+    ├── ackrep_data/                      ← separate repository for ackrep_data
     │  ├── .git/
     │  └── ...
-    └── ackrep_core/                      ← actual repository for ackrep_core
+    └── ackrep_core/                      ← separate repository for ackrep_core
        ├── .git/
        └── ...
 
 The components  *ackrep_core* and *ackrep_data* are maintained in separate repositories.
-It is recommended to clone them separately one level up in the directory structure.
+For the deployment to work it is expected to clone them separately one level up in the directory structure.
 
 ### Deployment Steps:
 
