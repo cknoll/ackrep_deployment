@@ -17,6 +17,7 @@ import os
 import argparse
 import yaml
 import deploymentutils as du
+import time
 
 from ipydex import IPS, activate_ips_on_exception
 activate_ips_on_exception()
@@ -75,6 +76,10 @@ def main():
 
 
 def find_and_render_templates(settings_dict):
+    """
+    Assume that the settings_dict specifies different key-value-pairs for different target files.
+    Each target files is specified by a `template`.
+    """
 
     # create a dict like {"template1.conf": {"value1": "abc", "value2": 10}, ...}
     template_settings_mapping = dict()
@@ -95,8 +100,11 @@ def find_and_render_templates(settings_dict):
     results = []
     base_path = mod_path
 
+    # make the rendering time available in the template-render-result
+    date_string = time.strftime("%Y-%m-%d %H:%M:%S")
+
     for template, settings in template_settings_mapping.items():
-        context = dict(settings=settings)
+        context = dict(settings=settings, date_string=date_string)
         res = core.render_template(template, context=context, special_str=".template", base_path=base_path)
         results.append(res)
 
