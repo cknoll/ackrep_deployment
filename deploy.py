@@ -77,7 +77,7 @@ def main():
     c.rsync_upload(source_path, settings["target_path"], target_spec="remote", printonly=False)
 
     # ------------------------------------------------------------------------------------------------------------------
-    c.cprint("restart the services", target_spec="both")
+    c.cprint("rebuild and restart the services", target_spec="both")
     target_deployment_path = f"{settings['target_path']}/ackrep_deployment"
     c.chdir(target_deployment_path)
 

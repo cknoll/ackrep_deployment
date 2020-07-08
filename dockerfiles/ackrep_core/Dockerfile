@@ -8,6 +8,10 @@ FROM python:3.7-slim
 ARG APP_USER=appuser
 RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} ${APP_USER}
 
+
+# turn on root access inside the container (for debugging only) !!
+# RUN echo 'root:Docker!' | chpasswd
+
 # Install packages needed to run your application (not build deps):
 #   mime-support -- for mime types when serving static files
 # We need to recreate the /usr/share/man/man{1..8} directories first because
@@ -15,6 +19,7 @@ RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} ${APP_USE
 RUN set -ex \
     && RUN_DEPS=" \
     mime-support \
+    lsof \
     git \
     " \
     && seq 1 8 | xargs -I{} mkdir -p /usr/share/man/man{} \
@@ -39,11 +44,19 @@ RUN set -ex \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $BUILD_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
+# this enables the usage of ipython inside the container (useful for debugging)
+RUN mkdir -p /home/$APP_USER
+RUN chown ${APP_USER}:${APP_USER} /home/$APP_USER
+
 # Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
 RUN mkdir /code/
 RUN chown ${APP_USER}:${APP_USER} /code
 WORKDIR /code/
 ADD ./ackrep_core /code/
+
+# ensure that we have no legacy db file lurking around from local testing
+RUN rm -f db.sqlite3
+
 RUN mkdir /code/ackrep_data
 ADD ./ackrep_data /code/ackrep_data
 
