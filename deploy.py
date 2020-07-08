@@ -72,7 +72,7 @@ def main():
     print("restart the services")
     remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
     c.chdir(remote_deployment_path)
-    c.run(f"docker-compose up -d", target_spec="remote", printonly=args.no_docker)
+    c.run(f"docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
 
 
 def find_and_render_templates(settings_dict):
