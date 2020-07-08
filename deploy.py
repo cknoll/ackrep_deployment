@@ -46,33 +46,45 @@ def main():
     res = find_and_render_templates(settings)
     rendered_template_list.extend(res)
 
-    if settings["type"] == "local":
-        print(du.bgreen("done"))
-        exit(0)
-
     local_deployment_files_base_dir = du.get_dir_of_this_file()
     general_base_dir = os.path.split(local_deployment_files_base_dir)[0]
+
+    remote = settings["type"] == "remote"
+    local = not remote
 
     c = du.StateConnection(settings["url"], user=settings["user"], target=settings["type"])
 
     # ------------------------------------------------------------------------------------------------------------------
-    print("stop running services (this might fail in the first run)")
+    c.cprint("stop running services (this might fail in the first run)", target_spec="both")
 
     # we do not use os.path.join here because the target platform is unix but the host platform should be flexible
-    remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
-    c.chdir(remote_deployment_path)
-    c.run(f"docker-compose down", target_spec="remote", printonly=args.no_docker)
+    if local:
+        # use path-separation for local OS
+        path_sep = os.path.sep
+    else:
+        # remote OS is unix. -> use slash
+        path_sep = "/"
+
+    target_deployment_path = f"{settings['target_path']}{path_sep}ackrep_deployment"
+    # 1/0
+
+    c.chdir(target_deployment_path)
+    c.run(f"sudo docker-compose down", target_spec="both", printonly=args.no_docker)
 
     # ------------------------------------------------------------------------------------------------------------------
-    print("upload all deployment files")
+    c.cprint("upload all deployment files", target_spec="remote")
     source_path = general_base_dir+os.path.sep
     c.rsync_upload(source_path, settings["target_path"], target_spec="remote", printonly=False)
 
     # ------------------------------------------------------------------------------------------------------------------
-    print("restart the services")
-    remote_deployment_path = f"{settings['target_path']}/ackrep_deployment"
-    c.chdir(remote_deployment_path)
-    c.run(f"docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
+    c.cprint("restart the services", target_spec="both")
+    target_deployment_path = f"{settings['target_path']}/ackrep_deployment"
+    c.chdir(target_deployment_path)
+
+    if remote:
+        c.run(f"sudo docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
+    else:
+        c.run(f"sudo docker-compose up -d --build ackrep-django", target_spec="local", printonly=args.no_docker)
 
 
 def find_and_render_templates(settings_dict):

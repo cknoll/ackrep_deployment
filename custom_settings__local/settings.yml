@@ -1,7 +1,7 @@
 type: "local"
 url: ""
 user: ""
-target_path: ""
+target_path: ".." # path to the <ackrep_project_dir> (see README.md); absolute or relative to deploy.py
 django-settings:
     template: "../ackrep_core/ackrep_core_django_settings/custom_settings.py.template"
     settings:
