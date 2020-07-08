@@ -101,7 +101,7 @@ def find_and_render_templates(settings_dict):
     base_path = mod_path
 
     # make the rendering time available in the template-render-result
-    date_string = time.strftime("%Y-%m-%d %H:%M:%S")
+    date_string = f'{time.strftime("%Y-%m-%d %H:%M:%S")} ({core.settings.TIME_ZONE})'
 
     for template, settings in template_settings_mapping.items():
         context = dict(settings=settings, date_string=date_string)
