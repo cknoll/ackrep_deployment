@@ -69,7 +69,7 @@ def main():
     # 1/0
 
     c.chdir(target_deployment_path)
-    c.run(f"sudo docker-compose down", target_spec="both", printonly=args.no_docker)
+    c.run(f"sudo docker-compose stop ackrep-django", target_spec="both", printonly=args.no_docker)
 
     # ------------------------------------------------------------------------------------------------------------------
     c.cprint("upload all deployment files", target_spec="remote")
@@ -82,7 +82,10 @@ def main():
     c.chdir(target_deployment_path)
 
     if remote:
-        c.run(f"sudo docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
+        # rebuild the ackrep-container (not the reverse proxy)
+        c.run(f"docker-compose build ackrep-django", target_spec="remote", printonly=args.no_docker)
+        c.run(f"docker-compose up -d ackrep-django", target_spec="remote", printonly=args.no_docker)
+        # c.run(f"docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
     else:
         c.run(f"sudo docker-compose up -d --build ackrep-django", target_spec="local", printonly=args.no_docker)
 
