@@ -49,10 +49,10 @@ RUN mkdir -p /home/$APP_USER
 RUN chown ${APP_USER}:${APP_USER} /home/$APP_USER
 
 # Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
-RUN mkdir /code/
-RUN chown ${APP_USER}:${APP_USER} /code
-WORKDIR /code/
-ADD ./ackrep_core /code/
+RUN mkdir -p /code/ackrep_core
+ADD ./ackrep_core /code/ackrep_core
+RUN chown -R ${APP_USER}:${APP_USER} /code
+WORKDIR /code/ackrep_core
 
 # ensure that we have no legacy db file lurking around from local testing
 RUN rm -f db.sqlite3
@@ -82,7 +82,7 @@ ENV UWSGI_HTTP=:8000 UWSGI_MASTER=1 UWSGI_HTTP_AUTO_CHUNKED=1 UWSGI_HTTP_KEEPALI
 ENV UWSGI_WORKERS=2 UWSGI_THREADS=4
 
 # uWSGI static file serving configuration (customize or comment out if not needed):
-ENV UWSGI_STATIC_MAP="/static/=/code/static/" UWSGI_STATIC_EXPIRES_URI="/static/.*\.[a-f0-9]{12,}\.(css|js|png|jpg|jpeg|gif|ico|woff|ttf|otf|svg|scss|map|txt) 315360000"
+ENV UWSGI_STATIC_MAP="/static/=/code/ackrep_core/static/" UWSGI_STATIC_EXPIRES_URI="/static/.*\.[a-f0-9]{12,}\.(css|js|png|jpg|jpeg|gif|ico|woff|ttf|otf|svg|scss|map|txt) 315360000"
 
 # Deny invalid hosts before they get to Django (uncomment and change to your hostname(s)):
 # ENV UWSGI_ROUTE_HOST="^(?!localhost:8000$) break:400"
