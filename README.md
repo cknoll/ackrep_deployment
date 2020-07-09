@@ -26,7 +26,7 @@ The ackrep project consists of several components which are maintained each in t
 - *custom_settings*
     - data used for customization and maintainance. For privacy and security reasons these settings are not published.
 
-
+<a name="directory-layout"></a>
 These components are represented by the following **directory layout**:
 
     <ackrep_project_dir>/
@@ -46,6 +46,10 @@ These components are represented by the following **directory layout**:
     │
     ├── ackrep_data/                      ← separate repository for ackrep_data
     │  ├── .git/
+    │  └── ...
+    │
+    ├── ackrep_data_for_unittests/        ← expected to be a clone/copy of ackrep_data
+    │  ├── .git/                            (must be created manually)
     │  └── ...
     └── ackrep_core/                      ← separate repository for ackrep_core
        ├── .git/
