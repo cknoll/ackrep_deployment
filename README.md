@@ -11,11 +11,11 @@ The ackrep project consists of several components which are maintained each in t
 
 **Functional Components**
 
-- *ackrep_core*
+- *[ackrep_core](https://github.com/cknoll/ackrep_core)*
     - main code of the ackrep engine and command-line-interface (cli)
-- *ackrep_data*
+- *[ackrep_data](https://github.com/cknoll/ackrep_data)*
     - actual data for the repository
-- (*ackrep_web*)
+- (*[ackrep_web](https://github.com/cknoll/ackrep_core/tree/main/ackrep_web)*)
     - code for the web front-end
     - currently still part of ackrep_core
 
