@@ -56,11 +56,20 @@ WORKDIR /code/ackrep_core
 
 # ensure that we have no legacy db file lurking around from local testing
 RUN rm -f db.sqlite3
+RUN rm -f /code/ackrep_core/media/*
 
 RUN mkdir /code/ackrep_data
 ADD ./ackrep_data /code/ackrep_data
+RUN chown -R ${APP_USER}:${APP_USER} /code/ackrep_data
 
 ADD ./ackrep_deployment/dockerfiles/ackrep_core/additional_files /code/
+
+
+# add the most important python packages for the demo-instance
+#  TODO: !! This should be handled via Environment specifications:
+
+ADD ./ackrep_deployment/dockerfiles/ackrep_data/additional_files /code/
+RUN pip install --no-cache-dir -r /code/tmp_requirements.txt
 
 
 # uWSGI will listen on this port
