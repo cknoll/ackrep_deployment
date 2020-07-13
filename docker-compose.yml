@@ -11,9 +11,7 @@ services:
             - "8000:8000"
         labels:
             - 'traefik.enable=true'
-            - 'traefik.http.routers.ackrep-django.rule=Host(`testing.ackrep.eu`)'
-            # - 'traefik.http.routers.ackrep-django.tls.domain[0].main=ackrep.eu'
-            # - 'traefik.http.routers.ackrep-django.tls.domain[0].sans=*.ackrep.eu'
+            - 'traefik.http.routers.ackrep-django.rule=Host(`testing.ackrep.org`)'
             - 'traefik.http.routers.ackrep-django.tls=true'
             - 'traefik.http.routers.ackrep-django.tls.certresolver=lets-encrypt'
 
