@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
     ackrep-django:
@@ -14,13 +14,46 @@ services:
             - 'traefik.http.routers.ackrep-django.rule=Host(`testing.ackrep.org`)'
             - 'traefik.http.routers.ackrep-django.tls=true'
             - 'traefik.http.routers.ackrep-django.tls.certresolver=lets-encrypt'
-
-    traefik:
-        image: traefik:2.1
-        restart: always
-        ports:
-            - '80:80'
-            - '443:443'
         volumes:
-            - ./traefik:/etc/traefik
-            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - type: "volume"
+              source: ackrep-data-volume
+              target: /work/ackrep_data
+              read_only: false
+            - type: "volume"
+              source: runner-export-volume
+              target: /work/runner-export
+              read_only: true
+              
+              # enable this container to start other containers
+            - /var/run/docker.sock:/var/run/docker.sock
+    
+    ackrep-runner-python3.7:
+        build:
+            context: ..
+            dockerfile: ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/Dockerfile
+        labels:
+            - 'runner.name=ackrep-runner-python3'
+        volumes:
+            - type: "volume"
+              source: ackrep-data-volume
+              target: /work/ackrep_data
+              read_only: true
+            - type: "volume"
+              source: runner-export-volume
+              target: /work/runner-export
+              read_only: false
+
+    #traefik:
+        #image: traefik:2.1
+        #restart: always
+        #ports:
+            #- '80:80'
+            #- '443:443'
+        #volumes:
+            #- ./traefik:/etc/traefik
+            #- /var/run/docker.sock:/var/run/docker.sock:ro
+
+
+volumes:
+    ackrep-data-volume:
+    runner-export-volume:

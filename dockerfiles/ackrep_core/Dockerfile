@@ -4,6 +4,8 @@
 
 FROM python:3.7-slim
 
+LABEL ackrep.container.name="ackrep-django"
+
 # Create a group and user to run our app
 ARG APP_USER=appuser
 RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} ${APP_USER}
@@ -21,55 +23,85 @@ RUN set -ex \
     mime-support \
     lsof \
     git \
+    sudo \
     " \
     && seq 1 8 | xargs -I{} mkdir -p /usr/share/man/man{} \
     && apt-get update && apt-get install -y --no-install-recommends $RUN_DEPS \
+    && usermod -a -G sudo ${APP_USER} \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy in your requirements file
 ADD ./ackrep_core/requirements.txt /requirements.txt
+ADD ./ackrep_core/deployment_requirements.txt /deployment_requirements.txt
 
 # OR, if you're using a directory for your requirements, copy everything (comment out the above and uncomment this if so):
 # ADD requirements /requirements
 
 # Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
 # Correct the path to your production requirements file, if needed.
+
+# also install docker in this step (before removing the whole stuff)
 RUN set -ex \
     && BUILD_DEPS=" \
     build-essential \
     " \
     && apt-get update && apt-get install -y --no-install-recommends $BUILD_DEPS \
     && pip install --no-cache-dir -r /requirements.txt \
+    && pip install --no-cache-dir -r /deployment_requirements.txt \
     \
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $BUILD_DEPS \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $BUILD_DEPS
+
+RUN set -ex \
+    && DOCKER_DEPS=" \
+    apt-transport-https  curl  software-properties-common gnupg2 \
+    " \
+    && apt-get install -y --no-install-recommends $DOCKER_DEPS \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
+    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+    
+    
+RUN set -ex \
+    && apt-get update \
+    && apt-cache policy docker-ce \
+    && apt-get install -y docker-ce \
     && rm -rf /var/lib/apt/lists/*
+
+    
+# TODO: move the apt-get purge command to the end of the apt section
 
 # this enables the usage of ipython inside the container (useful for debugging)
 RUN mkdir -p /home/$APP_USER
 RUN chown ${APP_USER}:${APP_USER} /home/$APP_USER
 
 # Copy your application code to the container (make sure you create a .dockerignore file if any large files or directories should be excluded)
-RUN mkdir -p /code/ackrep_core
-ADD ./ackrep_core /code/ackrep_core
-RUN chown -R ${APP_USER}:${APP_USER} /code
-WORKDIR /code/ackrep_core
+RUN mkdir -p /work/ackrep_core
+ADD ./ackrep_core /work/ackrep_core
+RUN chown -R ${APP_USER}:${APP_USER} /work
+WORKDIR /work/ackrep_core
 
 # ensure that we have no legacy db file lurking around from local testing
 RUN rm -f db.sqlite3
-RUN rm -f /code/ackrep_core/media/*
+RUN rm -f /work/ackrep_core/media/*
 
-RUN mkdir /code/ackrep_data
-ADD ./ackrep_data /code/ackrep_data
-RUN chown -R ${APP_USER}:${APP_USER} /code/ackrep_data
+RUN mkdir /work/ackrep_data
+ADD ./ackrep_data /work/ackrep_data
+RUN chown -R ${APP_USER}:${APP_USER} /work/ackrep_data
 
-ADD ./ackrep_deployment/dockerfiles/ackrep_core/additional_files /code/
+ADD ./ackrep_deployment/dockerfiles/ackrep_core/additional_files /work/
+
+
 
 
 # add the most important python packages for the demo-instance
 #  TODO: !! This should be handled via Environment specifications:
 
-ADD ./ackrep_deployment/dockerfiles/ackrep_data/additional_files /code/
-RUN pip install --no-cache-dir -r /code/tmp_requirements.txt
+ADD ./ackrep_deployment/dockerfiles/ackrep_data/additional_files /work/
+RUN pip install --no-cache-dir -r /work/tmp_requirements.txt
+
+# TODO: move this up near the docker install
+RUN pip install --no-cache-dir docker-compose
+
+COPY ./ackrep_deployment/docker-compose.yml /work/
 
 
 # uWSGI will listen on this port
@@ -91,7 +123,7 @@ ENV UWSGI_HTTP=:8000 UWSGI_MASTER=1 UWSGI_HTTP_AUTO_CHUNKED=1 UWSGI_HTTP_KEEPALI
 ENV UWSGI_WORKERS=2 UWSGI_THREADS=4
 
 # uWSGI static file serving configuration (customize or comment out if not needed):
-ENV UWSGI_STATIC_MAP="/static/=/code/ackrep_core/static/" UWSGI_STATIC_EXPIRES_URI="/static/.*\.[a-f0-9]{12,}\.(css|js|png|jpg|jpeg|gif|ico|woff|ttf|otf|svg|scss|map|txt) 315360000"
+ENV UWSGI_STATIC_MAP="/static/=/work/ackrep_core/static/" UWSGI_STATIC_EXPIRES_URI="/static/.*\.[a-f0-9]{12,}\.(css|js|png|jpg|jpeg|gif|ico|woff|ttf|otf|svg|scss|map|txt) 315360000"
 
 # Deny invalid hosts before they get to Django (uncomment and change to your hostname(s)):
 # ENV UWSGI_ROUTE_HOST="^(?!localhost:8000$) break:400"
@@ -100,7 +132,10 @@ ENV UWSGI_STATIC_MAP="/static/=/code/ackrep_core/static/" UWSGI_STATIC_EXPIRES_U
 USER ${APP_USER}:${APP_USER}
 
 # Uncomment after creating your docker-entrypoint.sh
-ENTRYPOINT ["/code/docker-entrypoint.sh"]
+# this will be run every time when the container starts
+ENTRYPOINT ["/work/docker-entrypoint.sh"]
 
+
+# this is the default command and will be run after the entrypoint script (due to `exec "$@"` at the end of that script)
 # Start uWSGI
 CMD ["uwsgi", "--show-config"]
