@@ -1,18 +1,10 @@
-# Dockerfile for the runner: ackrep-runner-python3
+# Dockerfile for the runner: ackrep-runner-python3.7
 
-# Note: current directory (.) is specified by `context` in `docker-compose.yml`
+FROM ackrep_base
 
-FROM python:3.7-slim
 
 LABEL ackrep.container.name="ackrep-runner-python37"
 
-# Create a group and user to run our app
-ARG APP_USER=appuser
-RUN groupadd -r ${APP_USER} && useradd --no-log-init -r -g ${APP_USER} ${APP_USER}
-
-
-# turn on root access inside the container (for debugging only) !!
-# RUN echo 'root:Docker!' | chpasswd
 
 # Install packages needed to run your application (not build deps):
 # We need to recreate the /usr/share/man/man{1..8} directories first because
@@ -26,9 +18,8 @@ RUN set -ex \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy in your requirements file
-RUN mkdir -p /ackrep_runner
-COPY ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/additional_files /ackrep_runner/
-WORKDIR /ackrep_runner
+COPY ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/additional_files $RUNNER_DIR
+WORKDIR $RUNNER_DIR
 
 # Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
 # Correct the path to your production requirements file, if needed.
@@ -42,13 +33,24 @@ RUN set -ex \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $BUILD_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
-# this is needed for the usage of ipython inside the container (useful for debugging)
-RUN mkdir -p /home/$APP_USER
-RUN chown ${APP_USER}:${APP_USER} /home/$APP_USER
+
+# tmp (obsolete after next complete rebuild)
+
+RUN mkdir -p $RUNNER_DIR/container \
+    && mkdir -p $RUNNER_DIR/jobs \
+    && chown -R ${ACKREP_USER}:${ACKREP_GROUP} $RUNNER_DIR \
+    # do not allow group to write -> 775
+    && chmod -R 775 $RUNNER_DIR \
+    && echo
 
 
 # Change to a non-root user
-USER ${APP_USER}:${APP_USER}
+# (this might be disabled for to simplify development (allow writing to volumes, which do not yet exist at build time))
+USER ${RUNNER_USER}:${ACKREP_GROUP}
+
+
+# make the container id (which is stored in the hostname) known to other containers
+RUN echo $(hostname) > $RUNNER_DIR/container/$(hostname).txt
 
 # Uncomment after creating your docker-entrypoint.sh
 # ENTRYPOINT ["/code/docker-entrypoint.sh"]

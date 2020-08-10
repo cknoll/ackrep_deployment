@@ -1,0 +1,57 @@
+FROM python:3.7-slim
+
+LABEL ackrep.container.name="ackrep-base"
+
+
+# avoid unwanted id-clashes with the host system
+ENV GID_MIN=2000 UID_MIN=2000
+
+# create two users which belong to the same group
+# runner user will be only allowed to write into $RUNNER_DIR
+
+ENV ACKREP_USER=ackrep_user ACKREP_GROUP=ackrep_group
+RUN groupadd -K GID_MIN=$GID_MIN ${ACKREP_GROUP} \
+    && useradd -K UID_MIN=$UID_MIN --no-log-init -g ${ACKREP_GROUP} ${ACKREP_USER} \
+    && mkdir -p /home/$ACKREP_USER \
+    && chown ${ACKREP_USER}:${ACKREP_GROUP} /home/$ACKREP_USER
+
+ENV RUNNER_USER=runner_user
+ # no special group for this user
+RUN echo \
+    && useradd -K UID_MIN=$UID_MIN --no-log-init -g ${ACKREP_GROUP} ${RUNNER_USER} \
+    && mkdir -p /home/$RUNNER_USER \
+    && chown ${RUNNER_USER}:${ACKREP_GROUP} /home/$RUNNER_USER
+
+
+ENV MAIN_DIR="/ackrep" \
+    RUNNER_DIR="/runner"
+
+RUN mkdir -p $MAIN_DIR \
+    && chown ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR \
+    # do not allow group to write -> 755
+    && chmod 755 $MAIN_DIR \
+    \
+    && mkdir -p $RUNNER_DIR/container \
+    && mkdir -p $RUNNER_DIR/jobs \
+    && chown -R ${ACKREP_USER}:${ACKREP_GROUP} $RUNNER_DIR \
+    # do not allow group to write -> 775
+    && chmod -R 775 $RUNNER_DIR \
+    && echo
+
+# this ist from the original django-docker-example
+# We need to recreate the /usr/share/man/man{1..8} directories because
+# they were clobbered by a parent image.
+
+RUN seq 1 8 | xargs -I{} mkdir -p /usr/share/man/man{}
+
+
+# create some debug output
+
+RUN echo "→ Debug output:" \
+    && cat /etc/group | tail -n 3 \
+    && cat /etc/passwd | tail -n 3
+
+# use this for the derived images after installing your stuff
+# USER ${ACKREP_USER}:${ACKREP_USER}
+
+CMD ["/bin/bash"]

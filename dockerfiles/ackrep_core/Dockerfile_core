@@ -1,0 +1,117 @@
+FROM ackrep_base
+
+LABEL ackrep.container.name="ackrep-core"
+
+
+
+RUN set -ex \
+    && RUN_DEPS=" \
+    mime-support \
+    lsof \
+    git \
+    sudo \
+    tmux \
+    " \
+    && apt-get update && apt-get install -y --no-install-recommends $RUN_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Copy in your requirements file
+ADD ./ackrep_core/requirements.txt $MAIN_DIR/requirements.txt
+ADD ./ackrep_core/deployment_requirements.txt $MAIN_DIR/deployment_requirements.txt
+
+# Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
+# Correct the path to your production requirements file, if needed.
+
+
+# temporary dependencies for installing pip stuff and docker daemon
+ENV TMP_DEPS=" \
+    build-essential \
+    apt-transport-https  curl  software-properties-common gnupg2 \
+    "
+
+RUN set -ex \
+    && apt-get update && apt-get install -y --no-install-recommends $TMP_DEPS \
+    && pip install --no-cache-dir -r $MAIN_DIR/requirements.txt \
+    && pip install --no-cache-dir -r $MAIN_DIR/deployment_requirements.txt
+
+#
+# && DOCKER_DEPS=" \
+#     apt-transport-https  curl  software-properties-common gnupg2 \
+#     " \
+#     && apt-get install -y --no-install-recommends $DOCKER_DEPS \
+#     && echo
+
+RUN set -ex \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
+    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+
+
+RUN set -ex \
+    && apt-get update \
+    && apt-cache policy docker-ce \
+    && apt-get install -y docker-ce
+
+
+# clean up
+RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $TMP_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+
+ADD ./ackrep_core $MAIN_DIR/ackrep_core
+WORKDIR /$MAIN_DIR/ackrep_core
+
+
+# ensure that we have no legacy db file lurking around from local testing
+RUN rm -f db.sqlite3
+RUN rm -f $MAIN_DIR/ackrep_core/media/*
+
+RUN mkdir $MAIN_DIR/ackrep_data
+ADD ./ackrep_data $MAIN_DIR/ackrep_data
+
+
+ADD ./ackrep_deployment/dockerfiles/ackrep_core/additional_files $MAIN_DIR
+
+
+RUN chown -R ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR
+
+# uWSGI will listen on this port
+EXPOSE 8000
+
+# Add any static environment variables needed by Django or your settings file here:
+ENV DJANGO_SETTINGS_MODULE=ackrep_core_django_settings.settings
+
+# Call collectstatic (customize the following line with the minimal environment variables needed for manage.py to run):
+RUN DATABASE_URL='' python manage.py collectstatic --noinput
+
+# Tell uWSGI where to find your wsgi file (change this):
+ENV UWSGI_WSGI_FILE=ackrep_core_django_settings/wsgi.py
+
+# Base uWSGI configuration (you shouldn't need to change these):
+ENV UWSGI_HTTP=:8000 UWSGI_MASTER=1 UWSGI_HTTP_AUTO_CHUNKED=1 UWSGI_HTTP_KEEPALIVE=1 UWSGI_LAZY_APPS=1 UWSGI_WSGI_ENV_BEHAVIOR=holy
+
+# Number of uWSGI workers and threads per worker (customize as needed):
+ENV UWSGI_WORKERS=2 UWSGI_THREADS=4
+
+# uWSGI static file serving configuration (customize or comment out if not needed):
+ENV UWSGI_STATIC_MAP="/static/=$MAIN_DIR/ackrep_core/static/" UWSGI_STATIC_EXPIRES_URI="/static/.*\.[a-f0-9]{12,}\.(css|js|png|jpg|jpeg|gif|ico|woff|ttf|otf|svg|scss|map|txt) 315360000"
+
+# Deny invalid hosts before they get to Django (uncomment and change to your hostname(s)):
+# ENV UWSGI_ROUTE_HOST="^(?!localhost:8000$) break:400"
+
+# Uncomment after creating your docker-entrypoint.sh
+# this will be run every time when the container starts
+
+# note: for some REASON: we docker does not accept $MAIN_DIR here -> hardcode path
+ENTRYPOINT ["/ackrep/docker-entrypoint.sh"]
+
+
+# This is to simplify debugging
+RUN usermod -a -G sudo ${ACKREP_USER}
+
+# Change to a non-root user
+USER ${ACKREP_USER}:${ACKREP_GROUP}
+
+# this is the default command and will be run after the entrypoint script (due to `exec "$@"` at the end of that script)
+# Start uWSGI
+CMD ["uwsgi", "--show-config"]

@@ -1,12 +1,20 @@
 version: "3.8"
 
 services:
-    ackrep-django:
+    ackrep-base:
+        build:
+            context: ..
+            dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile_base
+        image: ackrep_base:latest
+
+    # ---------------------------
+
+    ackrep-core:
         environment:
             DJANGO_MANAGEPY_MIGRATE: "on"
         build:
             context: ..
-            dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile
+            dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile_core
         ports:
             - "8000:8000"
         labels:
@@ -16,18 +24,21 @@ services:
             - 'traefik.http.routers.ackrep-django.tls.certresolver=lets-encrypt'
         volumes:
             - type: "volume"
-              source: ackrep-data-volume
-              target: /work/ackrep_data
+              source: ackrep-work-volume
+              target: /ackrep
               read_only: false
             - type: "volume"
               source: runner-export-volume
-              target: /work/runner-export
-              read_only: true
-              
+              target: /runner
+              read_only: false
+
               # enable this container to start other containers
             - /var/run/docker.sock:/var/run/docker.sock
-    
+
+    # ---------------------------
+
     ackrep-runner-python3.7:
+        # note: in production scenario the runner containers will not be started from the host via `docker-compose ...` but from the ackrep-django container via `docker ... `
         build:
             context: ..
             dockerfile: ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/Dockerfile
@@ -35,13 +46,15 @@ services:
             - 'runner.name=ackrep-runner-python3'
         volumes:
             - type: "volume"
-              source: ackrep-data-volume
-              target: /work/ackrep_data
-              read_only: true
+              source: ackrep-work-volume
+              target: /ackrep
+              read_only: false
             - type: "volume"
               source: runner-export-volume
-              target: /work/runner-export
+              target: /runner
               read_only: false
+        depends_on:
+            - ackrep-core
 
     #traefik:
         #image: traefik:2.1
@@ -55,5 +68,5 @@ services:
 
 
 volumes:
-    ackrep-data-volume:
+    ackrep-work-volume:
     runner-export-volume:
