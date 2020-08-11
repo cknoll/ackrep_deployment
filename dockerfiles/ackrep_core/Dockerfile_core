@@ -1,23 +1,14 @@
 FROM ackrep_base
 
-LABEL ackrep.container.name="ackrep-core"
+LABEL ackrep.image.name="ackrep-core"
+LABEL ackrep.image.entity_key="UXINU"
+LABEL ackrep.image.type="core"
 
 
-
-RUN set -ex \
-    && RUN_DEPS=" \
-    mime-support \
-    lsof \
-    git \
-    sudo \
-    tmux \
-    " \
-    && apt-get update && apt-get install -y --no-install-recommends $RUN_DEPS \
-    && rm -rf /var/lib/apt/lists/*
+# this is for uwsgi
+RUN pip install --no-cache-dir -r $MAIN_DIR/ackrep_core/deployment_requirements.txt
 
 
-# Copy in your requirements file
-ADD ./ackrep_core/requirements.txt $MAIN_DIR/requirements.txt
 ADD ./ackrep_core/deployment_requirements.txt $MAIN_DIR/deployment_requirements.txt
 
 # Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
@@ -25,27 +16,14 @@ ADD ./ackrep_core/deployment_requirements.txt $MAIN_DIR/deployment_requirements.
 
 
 # temporary dependencies for installing pip stuff and docker daemon
-ENV TMP_DEPS=" \
-    build-essential \
+ENV DOCKER_DEPS=" \
     apt-transport-https  curl  software-properties-common gnupg2 \
     "
 
 RUN set -ex \
-    && apt-get update && apt-get install -y --no-install-recommends $TMP_DEPS \
-    && pip install --no-cache-dir -r $MAIN_DIR/requirements.txt \
-    && pip install --no-cache-dir -r $MAIN_DIR/deployment_requirements.txt
-
-#
-# && DOCKER_DEPS=" \
-#     apt-transport-https  curl  software-properties-common gnupg2 \
-#     " \
-#     && apt-get install -y --no-install-recommends $DOCKER_DEPS \
-#     && echo
-
-RUN set -ex \
+    && apt-get update && apt-get install -y --no-install-recommends $DOCKER_DEPS \
     && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
     && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-
 
 RUN set -ex \
     && apt-get update \
@@ -54,26 +32,13 @@ RUN set -ex \
 
 
 # clean up
-RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $TMP_DEPS \
+RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $DOCKER_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
+# copy the entrypoint script
 
-ADD ./ackrep_core $MAIN_DIR/ackrep_core
-WORKDIR /$MAIN_DIR/ackrep_core
+COPY ./ackrep_deployment/dockerfiles/ackrep_core/additional_files $MAIN_DIR
 
-
-# ensure that we have no legacy db file lurking around from local testing
-RUN rm -f db.sqlite3
-RUN rm -f $MAIN_DIR/ackrep_core/media/*
-
-RUN mkdir $MAIN_DIR/ackrep_data
-ADD ./ackrep_data $MAIN_DIR/ackrep_data
-
-
-ADD ./ackrep_deployment/dockerfiles/ackrep_core/additional_files $MAIN_DIR
-
-
-RUN chown -R ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR
 
 # uWSGI will listen on this port
 EXPOSE 8000
@@ -102,12 +67,16 @@ ENV UWSGI_STATIC_MAP="/static/=$MAIN_DIR/ackrep_core/static/" UWSGI_STATIC_EXPIR
 # Uncomment after creating your docker-entrypoint.sh
 # this will be run every time when the container starts
 
-# note: for some REASON: we docker does not accept $MAIN_DIR here -> hardcode path
+# note: for some unknown reason docker does not accept $MAIN_DIR here -> hardcode path
 ENTRYPOINT ["/ackrep/docker-entrypoint.sh"]
 
 
 # This is to simplify debugging
-RUN usermod -a -G sudo ${ACKREP_USER}
+# RUN usermod -a -G sudo ${ACKREP_USER}
+
+# this user should be allowed to run docker commands
+RUN usermod -a -G docker ${ACKREP_USER}
+
 
 # Change to a non-root user
 USER ${ACKREP_USER}:${ACKREP_GROUP}

@@ -12,9 +12,11 @@ services:
     ackrep-core:
         environment:
             DJANGO_MANAGEPY_MIGRATE: "on"
+            INIT_RUNNERS: "on"
         build:
             context: ..
             dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile_core
+        image: ackrep_core:latest
         ports:
             - "8000:8000"
         labels:
@@ -39,9 +41,12 @@ services:
 
     ackrep-runner-python3.7:
         # note: in production scenario the runner containers will not be started from the host via `docker-compose ...` but from the ackrep-django container via `docker ... `
+
+        # siehe auch: https://stackoverflow.com/questions/39100483/how-i-can-group-containers-in-docker-compose/47327737
         build:
             context: ..
             dockerfile: ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/Dockerfile
+        image: ackrep_runner_python3.7:latest
         labels:
             - 'runner.name=ackrep-runner-python3'
         volumes:

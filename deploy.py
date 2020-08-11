@@ -82,12 +82,23 @@ def main():
     c.chdir(target_deployment_path)
 
     if remote:
-        # rebuild the ackrep-container (not the reverse proxy)
-        c.run(f"docker-compose build ackrep-django", target_spec="remote", printonly=args.no_docker)
-        c.run(f"docker-compose up -d ackrep-django", target_spec="remote", printonly=args.no_docker)
+        #
+        c.run(f"docker container prune -f", target_spec="remote", printonly=args.no_docker)
+        #     echo "remove all obsolete images"
+        #     docker rmi -f $(docker images | grep "^<none>" | awk '{print $3}')
+
+        # rebuild the ackrep-containers (not the reverse proxy)
+        c.run(f"docker-compose build ackrep-base", target_spec="remote", printonly=args.no_docker)
+
+        c.run(f"docker-compose build ackrep-core", target_spec="remote", printonly=args.no_docker)
+        c.run(f"docker-compose build ackrep-runner-python3.7", target_spec="remote", printonly=args.no_docker)
+
+        c.run(f"docker-compose up -d ackrep-core", target_spec="remote", printonly=args.no_docker)
         # c.run(f"docker-compose up -d --build", target_spec="remote", printonly=args.no_docker)
     else:
-        c.run(f"sudo docker-compose up -d --build ackrep-django", target_spec="local", printonly=args.no_docker)
+        c.run(f"docker-compose build ackrep-base", target_spec="local", printonly=args.no_docker)
+        c.run(f"docker-compose build ackrep-runner-python3.7", target_spec="local", printonly=args.no_docker)
+        c.run(f"docker-compose up -d --build ackrep-core", target_spec="local", printonly=args.no_docker)
 
 
 def find_and_render_templates(settings_dict):

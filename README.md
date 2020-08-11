@@ -75,3 +75,25 @@ The deployment process is triggered by the command `python deploy.py <path_to/se
 - manually start development server: `python manage.py runserver` from the ackrep_core directory.
 
 
+### Container Concept:
+
+On the (testing) production system there are several containers:
+- `ackrep-core` (running the django web service)
+- one or more *runner*-services which execute the *check-solution-jobs*
+    - `ackrep-runner-python3.7`
+
+
+These containers communicate via shared directories ("docker volumes"):
+
+
+    /
+    ├── ackrep/
+    │  ├── ackrep_data/..
+    │  ├── ackrep_core/..
+    │  └── ...
+    │
+    ├── runner/
+    │  ├── container/..
+    │  ├── jobs/..
+    │  └── ...
+    └── ...

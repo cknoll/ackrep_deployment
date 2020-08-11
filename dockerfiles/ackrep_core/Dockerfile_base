@@ -1,6 +1,6 @@
 FROM python:3.7-slim
 
-LABEL ackrep.container.name="ackrep-base"
+LABEL ackrep.image.name="ackrep-base"
 
 
 # avoid unwanted id-clashes with the host system
@@ -43,6 +43,55 @@ RUN mkdir -p $MAIN_DIR \
 # they were clobbered by a parent image.
 
 RUN seq 1 8 | xargs -I{} mkdir -p /usr/share/man/man{}
+
+
+
+
+RUN set -ex \
+    && RUN_DEPS=" \
+    mime-support \
+    lsof \
+    git \
+    sudo \
+    tmux \
+    curl \
+    " \
+    && apt-get update && apt-get install -y --no-install-recommends $RUN_DEPS \
+    && rm -rf /var/lib/apt/lists/*
+
+
+
+ADD ./ackrep_core $MAIN_DIR/ackrep_core
+WORKDIR /$MAIN_DIR/ackrep_core
+
+# Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
+# Correct the path to your production requirements file, if needed.
+
+# temporary dependencies for installing pip stuff and docker daemon
+ENV BUILD_DEPS=" \
+    build-essential \
+    "
+
+RUN set -ex \
+    && apt-get update && apt-get install -y --no-install-recommends $BUILD_DEPS \
+    && pip install --no-cache-dir -r $MAIN_DIR/ackrep_core/requirements.txt
+
+
+# install ackrep itself (in editable mode):
+RUN pip install -e .
+
+# ensure that we have no legacy db file lurking around from local testing
+RUN rm -f db.sqlite3
+RUN rm -f $MAIN_DIR/ackrep_core/media/*
+
+RUN mkdir $MAIN_DIR/ackrep_data
+ADD ./ackrep_data $MAIN_DIR/ackrep_data
+
+
+# set owner and mode again
+
+RUN chown -R ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR \
+    && chmod -R 755 $MAIN_DIR
 
 
 # create some debug output
