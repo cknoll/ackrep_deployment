@@ -43,6 +43,10 @@ These components are represented by the following **directory layout**:
     │      └── ...
     │
     │
+    ├── runner/
+    │  ├── .jobs/                         ← directory where the execution scripts are stored and executed
+    │  └── ...
+    │
     │
     ├── ackrep_data/                      ← separate repository for ackrep_data
     │  ├── .git/

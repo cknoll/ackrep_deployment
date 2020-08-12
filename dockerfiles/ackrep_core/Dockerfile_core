@@ -5,11 +5,11 @@ LABEL ackrep.image.entity_key="UXINU"
 LABEL ackrep.image.type="core"
 
 
+
+
 # this is for uwsgi
 RUN pip install --no-cache-dir -r $MAIN_DIR/ackrep_core/deployment_requirements.txt
 
-
-ADD ./ackrep_core/deployment_requirements.txt $MAIN_DIR/deployment_requirements.txt
 
 # Install build deps, then run `pip install`, then remove unneeded build deps all in a single step.
 # Correct the path to your production requirements file, if needed.
@@ -35,9 +35,6 @@ RUN set -ex \
 RUN apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $DOCKER_DEPS \
     && rm -rf /var/lib/apt/lists/*
 
-# copy the entrypoint script
-
-COPY ./ackrep_deployment/dockerfiles/ackrep_core/additional_files $MAIN_DIR
 
 
 # uWSGI will listen on this port
@@ -64,23 +61,31 @@ ENV UWSGI_STATIC_MAP="/static/=$MAIN_DIR/ackrep_core/static/" UWSGI_STATIC_EXPIR
 # Deny invalid hosts before they get to Django (uncomment and change to your hostname(s)):
 # ENV UWSGI_ROUTE_HOST="^(?!localhost:8000$) break:400"
 
-# Uncomment after creating your docker-entrypoint.sh
-# this will be run every time when the container starts
-
-# note: for some unknown reason docker does not accept $MAIN_DIR here -> hardcode path
-ENTRYPOINT ["/ackrep/docker-entrypoint.sh"]
-
 
 # This is to simplify debugging
-# RUN usermod -a -G sudo ${ACKREP_USER}
+# RUN groupadd sudo usermod -a -G sudo ${ACKREP_USER}
 
 # this user should be allowed to run docker commands
 RUN usermod -a -G docker ${ACKREP_USER}
 
 
-# Change to a non-root user
-USER ${ACKREP_USER}:${ACKREP_GROUP}
+# this serves for getting recent ackrep-version into the container without complete rebuild
+RUN echo "some variable string 5"
+ADD ./ackrep_core $MAIN_DIR/ackrep_core
+
+
+# copy entrypoint
+
+# place entrypoint outside the volume
+RUN mkdir -p $/additional_files
+COPY ./ackrep_deployment/dockerfiles/ackrep_core/additional_files /additional_files
+
+ENTRYPOINT ["/additional_files/docker-entrypoint.sh"]
+
+# Change to a non-root user (but with docker permissions)
+USER ${ACKREP_USER}:${docker}
 
 # this is the default command and will be run after the entrypoint script (due to `exec "$@"` at the end of that script)
 # Start uWSGI
 CMD ["uwsgi", "--show-config"]
+

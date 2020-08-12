@@ -6,11 +6,12 @@ set -e
 if [ "x$DJANGO_MANAGEPY_MIGRATE" = 'xon' ]; then
 
     # create an empty database
-    python manage.py migrate --noinput --run-syncdb
+    python $MAIN_DIR/ackrep_core/manage.py migrate --noinput --run-syncdb
     # ackrep -l ../ackrep_data
     python -c "from ackrep_core import core; core.load_repo_to_db('$MAIN_DIR/ackrep_data')"
     # this is the place where fixtures could be loaded
 fi
+
 
 if [ "x$INIT_RUNNERS" = 'xon' ]; then
 

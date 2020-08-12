@@ -24,8 +24,9 @@ RUN echo \
 
 
 ENV MAIN_DIR="/ackrep" \
-    RUNNER_DIR="/runner"
+    RUNNER_DIR="/ackrep/runner"
 
+# note that the permissions here are only for information. they will be set again after adding content.
 RUN mkdir -p $MAIN_DIR \
     && chown ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR \
     # do not allow group to write -> 755
@@ -89,9 +90,16 @@ ADD ./ackrep_data $MAIN_DIR/ackrep_data
 
 
 # set owner and mode again
+RUN mkdir -p $RUNNER_DIR/jobs
 
 RUN chown -R ${ACKREP_USER}:${ACKREP_GROUP} $MAIN_DIR \
-    && chmod -R 755 $MAIN_DIR
+    && chmod -R 755 $MAIN_DIR \
+    && chown -R ${ACKREP_USER}:${ACKREP_GROUP} $RUNNER_DIR
+    # do allow group to write -> 775
+    # && chmod -R 775 $RUNNER_DIR
+
+# note that within $RUNNER_DIR/jobs there will be job-dirs created with mode 775
+
 
 
 # create some debug output

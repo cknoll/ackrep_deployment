@@ -13,6 +13,7 @@ services:
         environment:
             DJANGO_MANAGEPY_MIGRATE: "on"
             INIT_RUNNERS: "on"
+            INSIDE_DOCKER_CONTAINER: "True"
         build:
             context: ..
             dockerfile: ./ackrep_deployment/dockerfiles/ackrep_core/Dockerfile_core
@@ -29,12 +30,14 @@ services:
               source: ackrep-work-volume
               target: /ackrep
               read_only: false
-            - type: "volume"
-              source: runner-export-volume
-              target: /runner
-              read_only: false
 
-              # enable this container to start other containers
+            # access the current state of the software without rebuilding the container (debugging only)
+            - type: "bind"
+              source: ..
+              target: /debug
+              read_only: true
+
+            # enable this container to start other containers
             - /var/run/docker.sock:/var/run/docker.sock
 
     # ---------------------------
@@ -45,7 +48,7 @@ services:
         # siehe auch: https://stackoverflow.com/questions/39100483/how-i-can-group-containers-in-docker-compose/47327737
         build:
             context: ..
-            dockerfile: ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3/Dockerfile
+            dockerfile: ./ackrep_deployment/dockerfiles/runners/ackrep-runner-python3.7/Dockerfile
         image: ackrep_runner_python3.7:latest
         labels:
             - 'runner.name=ackrep-runner-python3'
@@ -53,10 +56,6 @@ services:
             - type: "volume"
               source: ackrep-work-volume
               target: /ackrep
-              read_only: false
-            - type: "volume"
-              source: runner-export-volume
-              target: /runner
               read_only: false
         depends_on:
             - ackrep-core
@@ -74,4 +73,3 @@ services:
 
 volumes:
     ackrep-work-volume:
-    runner-export-volume:
