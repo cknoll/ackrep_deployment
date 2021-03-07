@@ -55,23 +55,30 @@ These components are represented by the following **directory layout**:
        ├── .git/
        └── ...
 
-The components  *ackrep_core* and *ackrep_data* are maintained in separate repositories.
+The components *ackrep_core* and *ackrep_data* are maintained in separate repositories.
 For the deployment to work it is expected to clone them separately one level up in the directory structure.
 
-### Deployment Steps:
+### Deployment and Testing:
 
-The deployment process is triggered by the command `python deploy.py <path_to/settings.yml>` and consists of the following steps (not all of them are currently implemented):
 
-**steps for local and remote deployment**
-- create configuration files such as `site_specific_settings.py` from templates with data from `settings.yml`
+#### Without Docker
 
-**steps only for remote deployment**
-- stop currently running ackrep-related services on the target server
-- upload (rsync) all project data
-- restart all running ackrep-related services on the target server
-- perform tests (not yet implemented)
+- clone *ackrep_core* and enter the repo directory
+- `pip install -r requirements.txt`
+- `python3 manage.py runserver`
+- visit <http://localhost:8000/> with your browser and check if the ackrep landing page is shown
 
-**steps only for local deployment**
-- manually start development server: `python manage.py runserver` from the ackrep_core directory.
+
+### With Docker
+
+
+**steps for local testing deployment**
+- install docker (e.g. via `apt install docker-ce docker-ce-cli docker-ce-rootless-extras`)
+- install docker-compose (e.g. via `pip install docker-compose`)
+- create a directory structure like above
+- `cd ackrep_deployment`
+- build the main container: `docker-compose up -d --remove-orphans --build ackrep-django`
+- run the main container: `docker-compose up ackrep-django`
+- visit <http://localhost:8000/> with your browser and check if the ackrep landing page is shown
 
 
