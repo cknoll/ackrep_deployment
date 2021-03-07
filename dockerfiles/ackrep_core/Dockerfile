@@ -28,6 +28,7 @@ RUN set -ex \
 
 # Copy in your requirements file
 ADD ./ackrep_core/requirements.txt /requirements.txt
+ADD ./ackrep_core/deployment_requirements.txt /deployment_requirements.txt
 
 # OR, if you're using a directory for your requirements, copy everything (comment out the above and uncomment this if so):
 # ADD requirements /requirements
@@ -40,6 +41,7 @@ RUN set -ex \
     " \
     && apt-get update && apt-get install -y --no-install-recommends $BUILD_DEPS \
     && pip install --no-cache-dir -r /requirements.txt \
+    && pip install --no-cache-dir -r /deployment_requirements.txt \
     \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $BUILD_DEPS \
     && rm -rf /var/lib/apt/lists/*
